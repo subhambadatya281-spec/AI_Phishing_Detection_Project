@@ -28,7 +28,6 @@ create_users_table()
 # Global dictionary placeholder to store the latest scan data for PDF export
 report_data = {}
 
-
 @app.route("/", methods=["GET", "POST"])
 def home():
     if "user" not in session:
@@ -67,19 +66,16 @@ def home():
             r'(?:/?|[/?]\S+)$', re.IGNORECASE
         )
 
-        # Pre-emptively append scheme protocol to test structural match integrity
         temp_url = entered_url
         if not temp_url.startswith(("http://", "https://")):
             temp_url = "https://" + temp_url
 
-        # Explicitly block meaningless top-level edge cases like www.com or com
         is_invalid_edge_case = temp_url.lower() in [
             "https://www.com", "http://www.com", "https://com", "http://com", 
             "https://www.in", "https://in", "https://www.net", "https://net"
         ]
 
         if not url_pattern.match(temp_url) or is_invalid_edge_case:
-            # Terminate execution pipeline immediately and send a validation alert to UI
             result = "❌ INVALID INPUT"
             score = "Risk Score: N/A"
             reasons = ["Please provide a valid active website URL or Domain (e.g., google.com, steamcommunity.com)"]
@@ -90,80 +86,123 @@ def home():
                 reasons=reasons, vt_result="N/A", url_features={}, screenshot_status=False, geo_info=geo_info
             )
         
-        # If input passes the validation layer cleanly, update the master variable
         entered_url = temp_url
 
-        # Process predictive machine learning models and heuristics
-        prediction, probability = predict_url(entered_url)
-        risk, reasons = calculate_risk(entered_url, prediction)
+        # -----------------------------------------------------------------
+        # SAFE ANALYSIS WRAPPER: Catch errors from unreachable/phishing URLs
+        # -----------------------------------------------------------------
+        try:
+            # Process predictive machine learning models and heuristics
+            prediction, probability = predict_url(entered_url)
+            risk, reasons = calculate_risk(entered_url, prediction)
 
-        # Threshold classification logic
-        if risk >= 80:
-            result = "🚨 PHISHING WEBSITE"
-        elif risk >= 50:
-            result = "⚠️ SUSPICIOUS WEBSITE"
-        else:
-            result = "✅ LEGITIMATE WEBSITE"
+            if risk >= 80:
+                result = "🚨 PHISHING WEBSITE"
+            elif risk >= 50:
+                result = "⚠️ SUSPICIOUS WEBSITE"
+            else:
+                result = "✅ LEGITIMATE WEBSITE"
 
-        score = f"Risk Score: {risk}%"
+            score = f"Risk Score: {risk}%"
 
-        # Cryptographic SSL verification handshake execution
-        ssl_info = check_ssl(entered_url)
-        ssl_status = (
-            "Valid SSL Certificate" if ssl_info.get("SSL") else "No SSL / SSL Error"
-        )
+            # Cryptographic SSL verification handshake execution
+            try:
+                ssl_info = check_ssl(entered_url)
+                ssl_status = (
+                    "Valid SSL Certificate" if isinstance(ssl_info, dict) and ssl_info.get("SSL") else "No SSL / SSL Error"
+                )
+            except Exception as e:
+                print(f"SSL Check Error: {e}")
+                ssl_status = "No SSL / SSL Error"
 
-        # Multi-modular sequential data extraction pipeline
-        brands = detect_brand(entered_url)
-        domain_age = get_domain_age(entered_url)
-        url_features = extract_features(entered_url)
+            # Multi-modular sequential data extraction pipeline
+            try:
+                brands = detect_brand(entered_url)
+            except Exception as e:
+                print(f"Brand Detection Error: {e}")
+                brands = []
 
-        # VirusTotal Integration API Layer
-        vt_result = check_virustotal(entered_url)
-        if "HTTPSConnectionPool" in str(vt_result):
-            vt_result = "VirusTotal Service Unavailable"
+            try:
+                domain_age = get_domain_age(entered_url)
+            except Exception as e:
+                print(f"Domain Age Error: {e}")
+                domain_age = {"Domain": "", "Creation Date": "Not Available", "Age Days": "Not Available"}
 
-        # Core Domain Intelligence Infrastructure Fetch
-        domain_info = get_domain_info(entered_url)
-        
-        geo_info = {
-            "Country": domain_info.get("Country", "Not Available"),
-            "Region": domain_info.get("Region", "Not Available"),
-            "City": domain_info.get("City", "Not Available"),
-            "ISP": domain_info.get("ISP", "Not Available")
-        }
-        
-        # Automated headless browser screenshot capture
-        screenshot_status = capture_screenshot(entered_url)
+            try:
+                url_features = extract_features(entered_url)
+            except Exception as e:
+                print(f"Feature Extraction Error: {e}")
+                url_features = {}
 
-        # Real-time critical incident response email alert trigger
-        if risk >= 70:
-            send_alert(entered_url, result, risk)
+            # VirusTotal Integration API Layer
+            try:
+                vt_result = check_virustotal(entered_url)
+                if not vt_result or "HTTPSConnectionPool" in str(vt_result):
+                    vt_result = "VirusTotal Service Unavailable"
+            except Exception as e:
+                print(f"VirusTotal Error: {e}")
+                vt_result = "VirusTotal Service Unavailable"
 
-        # Persistent storage commit operations for history tracking
-        if entered_url and result:
-            save_scan(session["user"], entered_url, result, risk)
+            # Core Domain Intelligence Infrastructure Fetch
+            try:
+                domain_info = get_domain_info(entered_url)
+                if not isinstance(domain_info, dict):
+                    domain_info = {}
+            except Exception as e:
+                print(f"Domain Info Error: {e}")
+                domain_info = {}
+            
+            geo_info = {
+                "Country": domain_info.get("Country", "Not Available"),
+                "Region": domain_info.get("Region", "Not Available"),
+                "City": domain_info.get("City", "Not Available"),
+                "ISP": domain_info.get("ISP", "Not Available")
+            }
+            
+            # Automated headless browser screenshot capture
+            try:
+                screenshot_status = capture_screenshot(entered_url)
+            except Exception as e:
+                print(f"Screenshot Error: {e}")
+                screenshot_status = False
 
-        # Compilation of master document data structure for PDF generation
-        report_data = {
-            "URL": entered_url,
-            "Result": result,
-            "Risk Score": f"{risk}%",
-            "SSL Status": ssl_status,
-            "VirusTotal": vt_result,
-            "Detected Brand": ", ".join(brands) if brands else "None",
-            "Domain": domain_info.get("Domain", ""),
-            "IP Address": domain_info.get("IP", ""),
-            "Country": geo_info.get("Country", ""),
-            "Region": geo_info.get("Region", ""),
-            "City": geo_info.get("City", ""),
-            "ISP": geo_info.get("ISP", ""),
-            "Domain Age": domain_age.get("Age Days", "Not Available"),
-            "Creation Date": domain_age.get("Creation Date", "Not Available"),
-            "Risk Reasons": (
-                ", ".join(reasons) if reasons else "No suspicious indicators found"
-            ),
-        }
+            # Real-time critical incident response email alert trigger
+            try:
+                if risk >= 70:
+                    send_alert(entered_url, result, risk)
+            except Exception as e:
+                print(f"Email Alert Error: {e}")
+
+            # Persistent storage commit operations for history tracking
+            if entered_url and result:
+                save_scan(session["user"], entered_url, result, risk)
+
+            # Compilation of master document data structure for PDF generation
+            report_data = {
+                "URL": entered_url,
+                "Result": result,
+                "Risk Score": f"{risk}%",
+                "SSL Status": ssl_status,
+                "VirusTotal": str(vt_result),
+                "Detected Brand": ", ".join(brands) if brands else "None",
+                "Domain": domain_info.get("Domain", "Not Available"),
+                "IP Address": domain_info.get("IP", "Not Available"),
+                "Country": geo_info.get("Country", "Not Available"),
+                "Region": geo_info.get("Region", "Not Available"),
+                "City": geo_info.get("City", "Not Available"),
+                "ISP": geo_info.get("ISP", "Not Available"),
+                "Domain Age": domain_age.get("Age Days", "Not Available"),
+                "Creation Date": domain_age.get("Creation Date", "Not Available"),
+                "Risk Reasons": (
+                    ", ".join(reasons) if reasons else "No suspicious indicators found"
+                ),
+            }
+
+        except Exception as global_error:
+            print(f"Unhandled Scanning Error for {entered_url}: {global_error}")
+            result = "⚠️ ANALYSIS FAILED"
+            score = "Risk Score: N/A"
+            reasons = ["Unable to complete complete analysis for this domain. It may be offline or unreachable."]
 
     return render_template(
         "index.html",
@@ -181,7 +220,6 @@ def home():
         screenshot_status=screenshot_status,
         geo_info=geo_info,
     )
-
 
 @app.route("/history")
 def history():
