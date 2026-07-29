@@ -2,12 +2,17 @@ import os
 import requests
 
 def capture_screenshot(url):
+    """
+    Captures a screenshot of the specified URL and saves it to static/website.png.
+    Uses an external rendering API to remain compatible with cloud environments
+    where Google Chrome / Selenium binaries are unavailable.
+    """
     try:
-        # Output directory ensure karein
+        # Ensure static folder exists
         os.makedirs("static", exist_ok=True)
-        save_path = "static/website.png"
+        save_path = os.path.join("static", "website.png")
 
-        # Free Screenshot API Endpoint
+        # Screenshot API service
         api_url = f"https://image.thum.io/get/width/1200/crop/800/{url}"
         
         response = requests.get(api_url, timeout=12)
@@ -17,8 +22,9 @@ def capture_screenshot(url):
                 f.write(response.content)
             return True
         
+        print(f"Failed to retrieve screenshot. HTTP Status Code: {response.status_code}")
         return False
 
     except Exception as e:
-        print(f"Screenshot capture failed: {e}")
+        print(f"Screenshot Generation Error: {e}")
         return False
