@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scan History</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container mt-5">
+    <div class="mb-3">
+    <a href="/" class="btn btn-primary">Home</a>
+
+    <a href="/history" class="btn btn-secondary">History</a>
+
+    <a href="/logout" class="btn btn-danger">
+        Logout
+    </a>
+</div>
+
+<div class="card mt-3 mb-4">
+    <div class="card-body">
+
+        <h4>Model Performance</h4>
+
+        <ul>
+            <li>Accuracy: 98.2%</li>
+            <li>Precision: 98.22%</li>
+            <li>Recall: 98.22%</li>
+            <li>F1 Score: 98.22%</li>
+            <li>Algorithm: Random Forest</li>
+        </ul>
+
+    </div>
+</div>
+
+
+    <h2 class="mb-4">Scan History</h2>
+
+    <h3 class="mb-3">Security Dashboard</h3>
+
+    <hr>
+
+<h3>Model Performance</h3>
+
+<img
+src="{{ url_for('static', filename='confusion_matrix.png') }}"
+class="img-fluid border rounded">
+
+<br><br>
+
+    <a href="/static/confusion_matrix.png"
+    target="_blank"
+    class="btn btn-primary">
+    View Full Confusion Matrix
+</a>
+<h3>Model Comparison</h3>
+
+<img
+src="{{ url_for('static', filename='model_comparison.png') }}"
+class="img-fluid border rounded">
+
+<br><br>
+
+    <div class="row mb-4">
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5>Total Scans</h5>
+                    <h2>{{ total_scans }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5>Safe Websites</h5>
+                    <h2>{{ safe_count }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5>Suspicious Websites</h5>
+                    <h2>{{ phishing_count }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="mb-4">
+        <img src="{{ url_for('static', filename='chart.png') }}"
+            class="img-fluid border rounded">
+    </div>
+
+    <div class="mb-4">
+
+        <a href="/download_csv" class="btn btn-success">
+            Download CSV
+        </a>
+
+        <a href="/download_report" class="btn btn-danger">
+            Download PDF
+        </a>
+
+    </div>
+<h3>Feature Importance Analysis</h3>
+
+<img
+src="{{ url_for('static', filename='feature_importance.png') }}"
+class="img-fluid border rounded">
+    <table class="table table-bordered table-striped">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>URL</th>
+                <th>Result</th>
+                <th>Risk Score</th>
+                <th>Scan Time</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for row in records %}
+
+            <tr>
+                <td>{{ row[0] }}</td>
+                <td>{{ row[1] }}</td>
+                <td>
+
+{% if "LEGITIMATE" in row[2] %}
+<span class="badge bg-success">
+{{ row[2] }}
+</span>
+
+{% else %}
+<span class="badge bg-danger">
+{{ row[2] }}
+</span>
+
+{% endif %}
+
+</td>
+                <td>{{ row[3] }}%</td>
+                <td>{{ row[4] }}</td>
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+ 
+<hr>
+
+<div class="text-center mb-4">
+
+    <h6>
+        AI Phishing Detection System
+    </h6>
+
+    <p>
+        MCA  Project
+    </p>
+
+</div>
+
+</body>
+</html>
